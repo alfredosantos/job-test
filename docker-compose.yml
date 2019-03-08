@@ -2,7 +2,7 @@ version: "2.2"
 
 services:
   connector:
-      image: https://registry.gitlab.com/herlix/learn:0.0.0.1
+      image: registry.gitlab.com/herlix/learn:0.0.0.1
       container_name: learn-nodejs
       hostname: learn-nodejs
       environment:
