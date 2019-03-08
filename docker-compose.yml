@@ -6,6 +6,6 @@ services:
       container_name: learn-nodejs
       hostname: learn-nodejs
       environment:
-        - "PORT=80"
+        - "PORT=3978"
       ports:
         - "80:3978"
