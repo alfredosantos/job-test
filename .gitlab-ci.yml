@@ -1,0 +1,45 @@
+image: registry.gitlab.com/herlix/learn:1.0
+
+variables:
+  CI_DEBUG_TRACE: "false"
+
+before_script:
+  - docker login -u ${CI_REGISTRY_USER} --password ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+
+stages:
+  - Build
+
+build_publish:
+  stage: Build
+  script:
+  - COMPONENT_NAME="learn"
+  - apt update
+  - apt install curl gnupg -y
+  - mkdir -p ~/.ssh
+  - (umask  077 ; echo $SSH_KEY | base64 --decode > ~/.ssh/id_rsa)
+  - echo "Host *" > ~/.ssh/config
+  - echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+  - echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
+  - componentVersion=$(cat component_version)
+  - curl -sL https://deb.nodesource.com/setup_8.x | bash -
+  - apt install -y nodejs git
+  - npm install
+  - git checkout $CI_COMMIT_REF_NAME
+  - docker build -t "$COMPONENT_NAME:$componentVersion" .
+  - docker tag "$COMPONENT_NAME:$componentVersion" "${CI_REGISTRY}/$COMPONENT_NAME:$componentVersion"
+  - docker tag "$COMPONENT_NAME:$componentVersion" "${CI_REGISTRY}/$COMPONENT_NAME:latest"
+  - docker push ${CI_REGISTRY}/$COMPONENT_NAME:$componentVersion
+  - docker push ${CI_REGISTRY}/$COMPONENT_NAME:latest
+  - python increase-version.py component_version
+  - newComponentVersion=$(cat component_version)
+  - branch=$(git branch | grep \* | cut -d ' ' -f2)
+  - git config --global user.email "${GITLAB_USER_NAME}"
+  - git config --global user.name "${GITLAB_USER_EMAIL}"
+  - git remote set-url origin git@gitlab.com:herlix/learn.git
+  - git add .
+  - git tag -a "v$componentVersion" -m "v$componentVersion"
+  - git status
+  - git commit -m "Setting version from $componentVersion to $newComponentVersion [skip ci]"
+  - git push origin $CI_COMMIT_REF_NAME --tags
+  only:
+    - /^develop$/
